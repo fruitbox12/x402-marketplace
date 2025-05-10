@@ -150,7 +150,7 @@ export default function AddApiPage() {
 
         <div>
           <label htmlFor="parametersSchema" className="block text-sm font-medium text-gray-700">
-            Parameters Schema (JSON format, e.g., {`{\`{\`} "query": {`} {"id": "string"} {`}\`} }`})
+            Parameters Schema (e.g., {'{ "query": { "id": "string" } }'})
           </label>
           <textarea
             name="parametersSchema"

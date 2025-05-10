@@ -8,6 +8,8 @@ export default function WalletPage() {
   const [account, setAccount] = useState<CdpAccount | null>(null); // Renamed state variable
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [faucetTxHash, setFaucetTxHash] = useState<string | null>(null);
+  const [balanceWei, setBalanceWei] = useState<string | null>(null);
 
   const fetchAccountStatus = async () => { // Renamed function
     setIsLoading(true);
@@ -20,7 +22,8 @@ export default function WalletPage() {
         if (!data.account) {
           setMessage('No active CDP account. Create one below.');
         } else {
-          // setMessage(data.message || 'Account status loaded.');
+          setFaucetTxHash(null);
+          setBalanceWei(data.balanceWei || null);
         }
       } else {
         throw new Error(data.error || 'Failed to fetch account status');
@@ -70,12 +73,10 @@ export default function WalletPage() {
       const response = await fetch('/api/wallet/faucet', { method: 'POST' });
       const data = await response.json();
       if (response.ok) {
-        setAccount(data.account); // The backend now returns the updated account with mockBalance
+        setAccount(data.account);
+        setFaucetTxHash(data.txHash || data.faucetTransactionHash || null);
+        setBalanceWei(data.balanceWei || null);
         setMessage(data.message || 'Faucet funding successful.');
-        if(data.faucetTransactionHash){
-          console.log('Faucet Transaction Hash:', data.faucetTransactionHash);
-          // Optionally display this hash or a link to a block explorer if relevant for the testnet
-        }
       } else {
         throw new Error(data.error || 'Failed to fund from faucet');
       }
@@ -111,8 +112,13 @@ export default function WalletPage() {
           <div className="space-y-2">
             <p><strong>Address:</strong> <span className="font-mono text-sm text-gray-700 break-all">{account.address}</span></p>
             <p><strong>Network Type:</strong> <span className="font-semibold">{account.networkType.toUpperCase()}</span></p>
-            <p><strong>Mock Balance (for X402 Proxy):</strong> <span className="font-semibold text-lg">{account.mockBalance ?? 0} {account.currency}</span></p>
-            <p className="text-xs text-gray-500">Session Account Created: {new Date(account.createdAt).toLocaleString()}</p>
+            <p><strong>Created:</strong> <span className="text-xs text-gray-500">{new Date(account.createdAt).toLocaleString()}</span></p>
+            {faucetTxHash && (
+              <p><strong>Last Faucet Tx:</strong> <a href={`https://sepolia.basescan.org/tx/${faucetTxHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">{faucetTxHash}</a></p>
+            )}
+            {balanceWei && (
+              <p><strong>On-chain Balance:</strong> <span className="font-semibold">{(Number(balanceWei)/1e18).toFixed(4)} ETH</span></p>
+            )}
           </div>
         )}
         {!isLoading && !account && (

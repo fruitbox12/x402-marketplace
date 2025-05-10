@@ -13,6 +13,7 @@ interface ApiEntry {
   parametersSchema: any; // Parsed JSON schema, e.g., { query: { type: 'object' }, body: { type: 'object' } }
   pricePerCall: number;
   x402WrappedUrl: string; // Placeholder for the x402 enabled endpoint
+  creatorWalletAddress?: string; // Added
   createdAt: string;
 }
 
@@ -229,6 +230,11 @@ export default function MarketplacePage() {
                 <p>
                   <strong>Price:</strong> {api.pricePerCall} units/call
                 </p>
+                {api.creatorWalletAddress && (
+                  <p>
+                    <strong>Creator Wallet:</strong> <span className="font-mono text-xs text-blue-500 break-all">{api.creatorWalletAddress}</span>
+                  </p>
+                )}
                 <p>
                   <strong>Parameters Schema:</strong>
                 </p>

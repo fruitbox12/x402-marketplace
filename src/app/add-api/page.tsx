@@ -11,6 +11,7 @@ interface ApiFormData {
   // Later, we can add a more structured way to define parameters
   parametersSchema: string; // e.g., { "query": { "id": "string" }, "body": { "data": "object" } }
   pricePerCall: number; // Price in some unit (e.g., smallest unit of a crypto)
+  creatorWalletAddress: string; // Added for creator's payment address
 }
 
 export default function AddApiPage() {
@@ -21,6 +22,7 @@ export default function AddApiPage() {
     httpMethod: 'GET',
     parametersSchema: '{}',
     pricePerCall: 0,
+    creatorWalletAddress: '', // Initialize
   });
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,6 +69,7 @@ export default function AddApiPage() {
           httpMethod: 'GET',
           parametersSchema: '{}',
           pricePerCall: 0,
+          creatorWalletAddress: '', // Reset after successful submission
         });
       } else {
         // Server returned an error, result.error should contain the message from backend
@@ -147,7 +150,7 @@ export default function AddApiPage() {
 
         <div>
           <label htmlFor="parametersSchema" className="block text-sm font-medium text-gray-700">
-            Parameters Schema (JSON format, e.g., {`{"query": {"id": "string"} }`})
+            Parameters Schema (JSON format, e.g., {`{\`{\`} "query": {`} {"id": "string"} {`}\`} }`})
           </label>
           <textarea
             name="parametersSchema"
@@ -171,6 +174,20 @@ export default function AddApiPage() {
             min="0"
             step="any" 
             required
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+          />
+        </div>
+
+        {/* New input field for Creator Wallet Address */}
+        <div>
+          <label htmlFor="creatorWalletAddress" className="block text-sm font-medium text-gray-700">Creator Wallet Address (Optional)</label>
+          <input
+            type="text"
+            name="creatorWalletAddress"
+            id="creatorWalletAddress"
+            value={formData.creatorWalletAddress}
+            onChange={handleChange} // Assumes handleChange can handle this new field
+            placeholder="e.g., 0x123...abc or a Solana address"
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
           />
         </div>

@@ -13,8 +13,11 @@ interface ApiEntry {
   parametersSchema: any; // Parsed JSON schema, e.g., { query: { type: 'object' }, body: { type: 'object' } }
   pricePerCall: number;
   x402WrappedUrl: string; // Placeholder for the x402 enabled endpoint
-  creatorWalletAddress?: string; // Added
+  creatorWalletAddress?: string; // Address for the API creator to receive payments
   createdAt: string;
+  // Fields for on-chain payment (to be added by next step)
+  // paymentNetwork: string; 
+  // paymentCurrencySymbol: string; 
 }
 
 interface ApiResponse {
@@ -43,6 +46,7 @@ export default function MarketplacePage() {
   const [interactionResult, setInteractionResult] = useState<InteractionResult | null>(null);
   const [interactionLoading, setInteractionLoading] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
+  // const [transactionHash, setTransactionHash] = useState<string | null>(null); // Will be added next
 
   useEffect(() => {
     const fetchApis = async () => {
@@ -77,6 +81,7 @@ export default function MarketplacePage() {
     }
     setInteractionResult(null);
     setPaymentMessage(null);
+    // setTransactionHash(null); // Will be added next
     setIsInteractionModalOpen(true);
   };
 
@@ -91,6 +96,7 @@ export default function MarketplacePage() {
     setInteractionLoading(true);
     setInteractionResult(null);
     setPaymentMessage(null);
+    // setTransactionHash(null); // Will be added next
 
     let targetProxyUrl = selectedApiForInteraction.x402WrappedUrl;
     if (queryString) {
@@ -164,6 +170,9 @@ export default function MarketplacePage() {
           // Ideally, re-fetch wallet status here to show updated balance.
           // For now, just a message.
           setPaymentMessage(`Successfully called API. Cost: ${selectedApiForInteraction.pricePerCall} ${selectedApiForInteraction.pricePerCall === 1 ? 'unit' : 'units'}. Your wallet balance has been updated.`);
+          // if (responseData.transactionHash) { 
+          //   setTransactionHash(responseData.transactionHash);
+          // }
         }
       }
     } catch (err) {

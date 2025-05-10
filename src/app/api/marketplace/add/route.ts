@@ -1,0 +1,74 @@
+import { NextResponse } from 'next/server';
+// Import from the shared store
+import { marketplaceApis, ApiEntry } from '@/lib/marketplaceStore';
+
+// This is a simplified in-memory store for now.
+// In a real application, you'd use a database.
+// We'll define the structure of an API entry later when we build the marketplace view.
+// const marketplaceApis: any[] = []; // Remove this line
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const {
+      name,
+      description,
+      endpointUrl,
+      httpMethod,
+      parametersSchema,
+      pricePerCall
+    } = body;
+
+    // Basic validation (can be expanded)
+    if (!name || !endpointUrl || !httpMethod || pricePerCall === undefined || pricePerCall < 0) {
+      return NextResponse.json({ error: 'Missing required fields or invalid price.' }, { status: 400 });
+    }
+
+    let parsedParametersSchema = {};
+    try {
+      if (parametersSchema && parametersSchema.trim() !== '') {
+        parsedParametersSchema = JSON.parse(parametersSchema);
+      }
+    } catch (e) {
+      return NextResponse.json({ error: 'Invalid parametersSchema JSON format.' }, { status: 400 });
+    }
+
+    const newApiEntry: ApiEntry = {
+      id: `api_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, // Simple unique ID
+      name,
+      description,
+      endpointUrl,
+      httpMethod,
+      parametersSchema: parsedParametersSchema,
+      pricePerCall,
+      // x402wrappedUrl will be generated later when an x402 wrapper is set up for this
+      // For now, it's the same as endpointUrl or a placeholder
+      // Make sure this matches the expected format for the proxy
+      x402WrappedUrl: `/api/x402-proxy/${name.toLowerCase().replace(/\\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    marketplaceApis.push(newApiEntry);
+    console.log('New API Entry Added:', newApiEntry);
+    console.log('Current Marketplace APIs:', marketplaceApis);
+
+    // We will need a way to persist `marketplaceApis` if not using a database.
+    // For now, it's in-memory and will reset on server restart.
+
+    return NextResponse.json({ message: 'API added to marketplace successfully', apiId: newApiEntry.id, entry: newApiEntry });
+  } catch (error) {
+    console.error('Error adding API to marketplace:', error);
+    let errorMessage = 'Internal Server Error';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+}
+
+// We might also want a GET endpoint to list APIs in the marketplace later.
+export async function GET() {
+  // This is just for viewing the current in-memory list for development.
+  // The actual marketplace UI will likely fetch this.
+  return NextResponse.json({ apis: marketplaceApis }); // marketplaceApis is now imported
+} 

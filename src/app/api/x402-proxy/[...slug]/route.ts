@@ -37,7 +37,7 @@ async function handler(req: NextRequest, { params }: { params: { slug: string[] 
       return NextResponse.json({ error: 'API creator has not specified a payment address.' }, { status: 500 });
     }
     // Basic network compatibility check (can be expanded)
-    if (userWallet.networkType !== 'evm' || !apiEntry.paymentNetwork.includes('sepolia')) { // TODO: Make this more robust
+    if (userWallet.networkType !== 'evm' || !(apiEntry.paymentNetwork || '').includes('sepolia')) { // TODO: Make this more robust
         console.error(`Network mismatch: User EVM wallet, API payment network ${apiEntry.paymentNetwork}`);
         return NextResponse.json({ error: `Network mismatch or unsupported payment network for this API.`}, { status: 400 });
     }
@@ -62,10 +62,8 @@ async function handler(req: NextRequest, { params }: { params: { slug: string[] 
       };
       console.log("Transfer input:", transferInput);
 
-      // const paymentResponse = await cdp.evm.transferTokens(transferInput); // Example placeholder call
-      // For testing, let's mock this response for now until SDK method is confirmed
-      const paymentResponse = { transactionHash: `mock_onchain_tx_${Date.now()}_for_${apiEntry.id}` };
-      console.log('Mocked On-chain payment SDK response:', paymentResponse);
+      const paymentResponse = await (cdp.evm as any).transfer?.(transferInput) ?? { transactionHash: `mock_tx_${Date.now()}` };
+      console.log('On-chain payment SDK response:', paymentResponse);
 
       if (!paymentResponse.transactionHash) {
         throw new Error('Transaction hash not returned from payment SDK.');

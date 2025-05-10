@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 // Import from the shared store
-import { marketplaceApis, ApiEntry } from '@/lib/marketplaceStore';
+import { marketplaceApis, ApiEntry, addApiToStore } from '@/lib/marketplaceStore';
 
 // This is a simplified in-memory store for now.
 // In a real application, you'd use a database.
@@ -16,7 +16,10 @@ export async function POST(request: Request) {
       endpointUrl,
       httpMethod,
       parametersSchema,
-      pricePerCall
+      pricePerCall,
+      creatorWalletAddress,
+      paymentNetwork,
+      paymentCurrencySymbol
     } = body;
 
     // Basic validation (can be expanded)
@@ -41,6 +44,9 @@ export async function POST(request: Request) {
       httpMethod,
       parametersSchema: parsedParametersSchema,
       pricePerCall,
+      creatorWalletAddress: creatorWalletAddress || '',
+      paymentNetwork: paymentNetwork || 'base-sepolia',
+      paymentCurrencySymbol: paymentCurrencySymbol || 'ETH',
       // x402wrappedUrl will be generated later when an x402 wrapper is set up for this
       // For now, it's the same as endpointUrl or a placeholder
       // Make sure this matches the expected format for the proxy
@@ -48,7 +54,7 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
     };
 
-    marketplaceApis.push(newApiEntry);
+    addApiToStore(newApiEntry);
     console.log('New API Entry Added:', newApiEntry);
     console.log('Current Marketplace APIs:', marketplaceApis);
 

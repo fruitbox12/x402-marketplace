@@ -1,3 +1,7 @@
+import * as fs from 'fs';
+import { promises as fsPromises } from 'fs';
+import path from 'path';
+
 // Represents an account created via CDP SDK
 export interface CdpAccount {
   address: string;
@@ -10,6 +14,31 @@ export interface CdpAccount {
 }
 
 let currentCdpAccount: CdpAccount | null = null;
+
+// ────────────── Persistence ──────────────
+const DATA_DIR = path.resolve(process.cwd(), 'data');
+const DATA_FILE = path.join(DATA_DIR, 'wallet.json');
+
+(() => {
+  try {
+    const raw = fs.readFileSync(DATA_FILE, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      currentCdpAccount = parsed;
+    }
+  } catch (_) {
+    /* file does not exist yet */
+  }
+})();
+
+async function persist() {
+  try {
+    await fsPromises.mkdir(DATA_DIR, { recursive: true });
+    await fsPromises.writeFile(DATA_FILE, JSON.stringify(currentCdpAccount, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('Failed to persist wallet store:', err);
+  }
+}
 
 export const getCdpAccount = (): CdpAccount | null => {
   return currentCdpAccount;
@@ -24,6 +53,7 @@ export const setCdpAccount = (account: Omit<CdpAccount, 'createdAt' | 'mockBalan
     currency: account.networkType === 'evm' ? 'ETH_TEST' : 'SOL_TEST', // Example currency based on network
   };
   console.log('CDP Account set in store:', currentCdpAccount);
+  persist();
   return currentCdpAccount;
 };
 
@@ -31,6 +61,7 @@ export const setCdpAccount = (account: Omit<CdpAccount, 'createdAt' | 'mockBalan
 export const clearCdpAccount = () => {
   currentCdpAccount = null;
   console.log('Stored CDP Account cleared.');
+  persist();
 };
 
 // Updates the mock balance for the proxy simulation
@@ -39,6 +70,7 @@ export const updateMockBalance = (amount: number): CdpAccount | null => {
     if (currentCdpAccount.mockBalance === undefined) currentCdpAccount.mockBalance = 0;
     currentCdpAccount.mockBalance += amount;
     console.log('CDP Account mock balance updated:', currentCdpAccount);
+    persist();
     return currentCdpAccount;
   }
   return null;

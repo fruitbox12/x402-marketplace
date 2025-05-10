@@ -3,8 +3,8 @@ import { marketplaceApis, ApiEntry } from '@/lib/marketplaceStore';
 import { getCdpAccount } from '@/lib/walletStore';
 import { cdp } from '@/lib/cdpClient';
 
-async function handler(req: NextRequest, { params }: { params: { slug: string[] } }) {
-  const slugParts = params.slug;
+async function handler(req: NextRequest, { params }: { params: Promise<{ slug: string[] }> }) {
+  const { slug: slugParts } = await params;
   const requestedProxyPath = `/api/x402-proxy/${slugParts[0]}`;
   const apiEntry = marketplaceApis.find(api => api.x402WrappedUrl === requestedProxyPath);
 
@@ -112,13 +112,39 @@ async function handler(req: NextRequest, { params }: { params: { slug: string[] 
         try { dataToReturn = JSON.parse(responseBody); } catch (e) { /* keep as string if not parsable */ }
     }
 
+    // Build safe headers to forward
+    const safeHeaders = new Headers();
+    externalResponse.headers.forEach((value, key) => {
+      const lower = key.toLowerCase();
+      if ([
+        'transfer-encoding',
+        'content-encoding',
+        'set-cookie',
+        'connection',
+        'keep-alive',
+        'proxy-authenticate',
+        'proxy-authorization',
+        'te',
+        'trailer',
+        'upgrade',
+        'content-length'
+      ].includes(lower)) {
+        return; // skip forbidden headers
+      }
+      safeHeaders.set(key, value);
+    });
+    // Ensure JSON content-type (NextResponse.json sets it but we might have overwritten)
+    if (!safeHeaders.has('content-type')) {
+      safeHeaders.set('content-type', 'application/json');
+    }
+
     return NextResponse.json({ 
         apiResponse: dataToReturn,
-        ...(transactionHash && { transactionHash: transactionHash }) // Conditionally add transactionHash
+        ...(transactionHash && { transactionHash: transactionHash })
     }, {
         status: externalResponse.status,
         statusText: externalResponse.statusText,
-        headers: externalResponse.headers, 
+        headers: safeHeaders,
     });
 
   } catch (error) {

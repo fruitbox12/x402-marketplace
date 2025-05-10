@@ -45,24 +45,46 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ slug: s
     try {
       console.log(`Attempting on-chain payment: ${apiEntry.pricePerCall} (smallest unit of ${apiEntry.paymentCurrencySymbol}) on ${apiEntry.paymentNetwork} from ${userWallet.address} to ${apiEntry.creatorWalletAddress}`);
       
-      // TODO: Confirm the exact method and parameters for native currency transfer
-      // Assuming cdp.evm.transferTokens or similar. 
-      // The assetId/token parameter for native ETH on Base Sepolia needs to be confirmed.
-      // For a true native transfer, `contractAddress` would typically be omitted or a specific value used.
-      const transferInput = {
-        fromAddress: userWallet.address,
-        toAddress: apiEntry.creatorWalletAddress,
-        amount: apiEntry.pricePerCall.toString(), // Amount should be in smallest unit (e.g., WEI)
-        network: apiEntry.paymentNetwork, // e.g., "base-sepolia"
-        // assetId: 'native' OR token: 'ETH' OR contractAddress: undefined - This needs to be SDK specific
-        // For now, let's assume we might pass a token symbol if the SDK resolves it for native currencies,
-        // or it might be inferred if contractAddress is absent.
-        // This part is a placeholder pending exact SDK method confirmation.
-        token: apiEntry.paymentCurrencySymbol, // e.g. "ETH" - this is an assumption
-      };
-      console.log("Transfer input:", transferInput);
+      // Retrieve the signer account object managed by CDP
+      const senderAccount = await cdp.evm.getAccount({ address: userWallet.address as any });
 
-      const paymentResponse = await (cdp.evm as any).transfer?.(transferInput) ?? { transactionHash: `mock_tx_${Date.now()}` };
+      // Fetch current balances for logging / sanity-check
+      let ethBalanceDec: string | undefined;
+      try {
+        const balResp = await (senderAccount as any).listTokenBalances({ network: apiEntry.paymentNetwork as any });
+        const ethEntry = balResp?.balances?.find((b: any) => {
+          const sym = b.token?.symbol?.toLowerCase();
+          const addr = (b.token?.contractAddress || '').toLowerCase();
+          return sym === 'eth' || addr === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+        });
+        if (ethEntry) {
+          const raw = BigInt(ethEntry.amount.amount); // wei
+          const decimals = Number(ethEntry.amount.decimals);
+          ethBalanceDec = (Number(raw) / 10 ** decimals).toString();
+        }
+        console.log(`User wallet balance on ${apiEntry.paymentNetwork}:`, ethBalanceDec);
+      } catch (balErr) {
+        console.warn('Could not fetch wallet balance:', balErr);
+      }
+
+      console.log("pricePerCall", apiEntry.pricePerCall)
+
+      const amountEth = (apiEntry.paymentCurrencySymbol?.toUpperCase() === 'ETH')
+        ? (Number(apiEntry.pricePerCall)).toString()
+        : apiEntry.pricePerCall.toString();
+
+      if (ethBalanceDec && Number(ethBalanceDec) < Number(amountEth)) {
+        return NextResponse.json({ error: 'Insufficient balance for payment', required: amountEth, balance: ethBalanceDec }, { status: 402 });
+      }
+
+      // @ts-ignore – types for transfer expect stricter literal types; casting for runtime call
+      const paymentResponse = await (senderAccount as any).transfer({
+        to: apiEntry.creatorWalletAddress as any,
+        amount: amountEth,
+        token: (apiEntry.paymentCurrencySymbol || 'ETH').toLowerCase() as any,
+        network: apiEntry.paymentNetwork as any,
+      });
+
       console.log('On-chain payment SDK response:', paymentResponse);
 
       if (!paymentResponse.transactionHash) {

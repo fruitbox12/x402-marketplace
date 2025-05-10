@@ -27,6 +27,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields or invalid price.' }, { status: 400 });
     }
 
+    // If the API is paid, require a wallet address for the creator
+    if (pricePerCall > 0 && (!creatorWalletAddress || creatorWalletAddress.trim() === '')) {
+      return NextResponse.json({ error: 'creatorWalletAddress is required for paid APIs.' }, { status: 400 });
+    }
+
     let parsedParametersSchema = {};
     try {
       if (parametersSchema && parametersSchema.trim() !== '') {

@@ -115,15 +115,47 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ slug: s
     const additionalPath = slugParts.slice(1).join('/');
     targetUrl.pathname = targetUrl.pathname.replace(/\/$/, '') + '/' + additionalPath.replace(/^\//, '');
   }
+
+  // Copy any query params from incoming request
   req.nextUrl.searchParams.forEach((value, key) => {
     targetUrl.searchParams.append(key, value);
   });
 
+  // ───── Inject upstream API-key if required ─────
+  const outgoingHeaders = new Headers(req.headers);
+
+  if (apiEntry.authType === 'HEADER' && apiEntry.apiKeyName && apiEntry.apiKeySecret) {
+    outgoingHeaders.set(apiEntry.apiKeyName, apiEntry.apiKeySecret);
+  }
+
+  if (apiEntry.authType === 'QUERY' && apiEntry.apiKeyName && apiEntry.apiKeySecret) {
+    targetUrl.searchParams.set(apiEntry.apiKeyName, apiEntry.apiKeySecret);
+  }
+
   try {
+    // ---- DEBUG LOGS ----
+    console.log('[X402 Proxy] Forwarding to:', targetUrl.toString());
+    console.log('[X402 Proxy] Method:', req.method);
+    console.log('[X402 Proxy] Outgoing headers:', Object.fromEntries(outgoingHeaders.entries()));
+
+    let outboundBody: any = undefined;
+
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      // To avoid the "duplex option is required" error, we read the incoming
+      // request body as text (assumes JSON for our use-case) and forward it
+      // as a string. This is safe for JSON APIs and sidesteps the stream issue.
+      try {
+        outboundBody = await req.text();
+        console.log('[X402 Proxy] Body length (bytes):', outboundBody?.length || 0);
+      } catch (readErr) {
+        console.warn('[X402 Proxy] Could not read request body:', readErr);
+      }
+    }
+
     const externalResponse = await fetch(targetUrl.toString(), {
       method: req.method,
-      headers: req.headers, 
-      body: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
+      headers: outgoingHeaders,
+      ...(outboundBody !== undefined && { body: outboundBody, duplex: 'half' as const }),
     });
 
     const responseBody = await externalResponse.json().catch(() => externalResponse.text());

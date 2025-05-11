@@ -3,10 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
-import { withPaymentInterceptor } from 'x402-axios';
-import { privateKeyToAccount } from 'viem/accounts';
-import { createWalletClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
 
 // Matches the structure in api/marketplace/add/route.ts
 interface ApiEntry {
@@ -38,21 +34,8 @@ interface InteractionResult {
   isError?: boolean;
 }
 
-// ------------- TEMP DEMO KEY -------------
-// In production fetch the pk from an env-var, a browser wallet, etc.
-const pk = process.env.NEXT_PUBLIC_TEST_PRIVATE_KEY as `0x${string}`;
-
-const account = privateKeyToAccount(pk);
-
-// A Viem wallet-client is what x402 needs to sign the payment message
-const walletClient = createWalletClient({
-  account,
-  transport: http(),
-  chain: baseSepolia,
-});
-
-// Wrap any Axios instance; you can also pass { baseURL } like the docs
-export const x402 = withPaymentInterceptor(axios.create(), walletClient);
+// Axios instance for marketplace calls
+const apiClient = axios.create();
 
 export default function MarketplacePage() {
   const [apiList, setApiList] = useState<ApiEntry[]>([]);
@@ -150,23 +133,15 @@ export default function MarketplacePage() {
     }
 
     try {
-      const axiosResp = await x402.request({
+      const axiosResp = await apiClient.request({
         url   : targetProxyUrl,
         method: selectedApiForInteraction.httpMethod.toLowerCase(),
         data  : requestOptions.body,
         headers: requestOptions.headers as Record<string,string>,
       });
 
-      const rawText  = JSON.stringify(axiosResp.data);
-      const response = axiosResp;            // alias
-
-      // Read body once, then attempt to parse as JSON
-      let responseData: any = rawText;
-      try {
-        responseData = JSON.parse(rawText);
-      } catch (_) {
-        /* keep as plain text */
-      }
+      const response = axiosResp;
+      const responseData: any = response.data;
 
       const success = response.status >= 200 && response.status < 300;
 

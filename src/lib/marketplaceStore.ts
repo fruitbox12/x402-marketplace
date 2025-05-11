@@ -11,6 +11,10 @@ export interface ApiEntry {
   httpMethod: 'GET' | 'POST' | 'PUT' | 'DELETE' | string; // Allow specific methods or any string
   parametersSchema: any; // Parsed JSON schema
   pricePerCall: number;
+  /** Upstream authentication */
+  authType?: 'NONE' | 'HEADER' | 'QUERY'; // how the key should be attached when proxying
+  apiKeyName?: string;  // e.g. "Authorization" or "api_key" (header name or query param name)
+  apiKeySecret?: string; // secret value (ONLY stored on the server, never sent to client)
   // NEW: monetisation fields used by the x402 proxy
   creatorWalletAddress?: string;
   paymentNetwork?: string; // e.g. "base-sepolia"

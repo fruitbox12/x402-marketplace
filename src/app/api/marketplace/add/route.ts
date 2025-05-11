@@ -18,6 +18,9 @@ export async function POST(request: Request) {
       parametersSchema,
       pricePerCall,
       creatorWalletAddress,
+      authType,
+      apiKeyName,
+      apiKeySecret,
       paymentNetwork,
       paymentCurrencySymbol
     } = body;
@@ -30,6 +33,14 @@ export async function POST(request: Request) {
     // If the API is paid, require a wallet address for the creator
     if (pricePerCall > 0 && (!creatorWalletAddress || creatorWalletAddress.trim() === '')) {
       return NextResponse.json({ error: 'creatorWalletAddress is required for paid APIs.' }, { status: 400 });
+    }
+
+    // Upstream auth validation
+    const finalAuthType = authType || 'NONE';
+    if (finalAuthType !== 'NONE') {
+      if (!apiKeyName || !apiKeySecret) {
+        return NextResponse.json({ error: 'apiKeyName and apiKeySecret are required when authType is not NONE.' }, { status: 400 });
+      }
     }
 
     let parsedParametersSchema = {};
@@ -50,6 +61,9 @@ export async function POST(request: Request) {
       parametersSchema: parsedParametersSchema,
       pricePerCall,
       creatorWalletAddress: creatorWalletAddress || '',
+      authType: finalAuthType,
+      apiKeyName: finalAuthType === 'NONE' ? undefined : apiKeyName,
+      apiKeySecret: finalAuthType === 'NONE' ? undefined : apiKeySecret,
       paymentNetwork: paymentNetwork || 'base-sepolia',
       paymentCurrencySymbol: paymentCurrencySymbol || 'ETH',
       // x402wrappedUrl will be generated later when an x402 wrapper is set up for this
@@ -66,7 +80,8 @@ export async function POST(request: Request) {
     // We will need a way to persist `marketplaceApis` if not using a database.
     // For now, it's in-memory and will reset on server restart.
 
-    return NextResponse.json({ message: 'API added to marketplace successfully', apiId: newApiEntry.id, entry: newApiEntry });
+    const { apiKeySecret: _, ...redactedEntry } = newApiEntry;
+    return NextResponse.json({ message: 'API added to marketplace successfully', apiId: newApiEntry.id, entry: redactedEntry });
   } catch (error) {
     console.error('Error adding API to marketplace:', error);
     let errorMessage = 'Internal Server Error';
@@ -79,7 +94,6 @@ export async function POST(request: Request) {
 
 // We might also want a GET endpoint to list APIs in the marketplace later.
 export async function GET() {
-  // This is just for viewing the current in-memory list for development.
-  // The actual marketplace UI will likely fetch this.
-  return NextResponse.json({ apis: marketplaceApis }); // marketplaceApis is now imported
+  const redacted = marketplaceApis.map(({ apiKeySecret: _, ...rest }) => rest);
+  return NextResponse.json({ apis: redacted });
 } 

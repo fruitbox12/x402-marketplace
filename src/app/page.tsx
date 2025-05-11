@@ -16,7 +16,7 @@ export default function HomePage() {
         <nav className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto w-full">
           <Link href="/marketplace" legacyBehavior>
             <a className="group block p-6 bg-slate-800/50 hover:bg-slate-700/70 rounded-xl shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
-              <h2 className="text-2xl font-semibold text-purple-300 mb-2 group-hover:text-purple-200">Browse Marketplace</h2>
+              <h2 className="text-2xl font-semibold text-purple-300 mb-2 group- -hover:text-purple-200">Browse Marketplace</h2>
               <p className="text-slate-400 group-hover:text-slate-300">
                 Explore and interact with X402-enabled APIs.
               </p>

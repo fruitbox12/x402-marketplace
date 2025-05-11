@@ -12,6 +12,9 @@ interface ApiFormData {
   parametersSchema: string; // e.g., { "query": { "id": "string" }, "body": { "data": "object" } }
   pricePerCall: number; // Price in some unit (e.g., smallest unit of a crypto)
   creatorWalletAddress: string; // Added for creator's payment address
+  authType: 'NONE' | 'HEADER' | 'QUERY';
+  apiKeyName: string;
+  apiKeySecret: string;
 }
 
 export default function AddApiPage() {
@@ -23,6 +26,9 @@ export default function AddApiPage() {
     parametersSchema: '{}',
     pricePerCall: 0,
     creatorWalletAddress: '', // Initialize
+    authType: 'NONE',
+    apiKeyName: '',
+    apiKeySecret: '',
   });
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,6 +76,9 @@ export default function AddApiPage() {
           parametersSchema: '{}',
           pricePerCall: 0,
           creatorWalletAddress: '', // Reset after successful submission
+          authType: 'NONE',
+          apiKeyName: '',
+          apiKeySecret: '',
         });
       } else {
         // Server returned an error, result.error should contain the message from backend
@@ -191,6 +200,50 @@ export default function AddApiPage() {
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
           />
         </div>
+
+        {/* Upstream auth configuration */}
+        <div>
+          <label htmlFor="authType" className="block text-sm font-medium text-gray-700">Requires Upstream API-key?</label>
+          <select
+            name="authType"
+            id="authType"
+            value={formData.authType}
+            onChange={handleChange}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+          >
+            <option value="NONE">No</option>
+            <option value="HEADER">Yes – send in Header</option>
+            <option value="QUERY">Yes – send as Query param</option>
+          </select>
+        </div>
+
+        {formData.authType !== 'NONE' && (
+          <>
+            <div>
+              <label htmlFor="apiKeyName" className="block text-sm font-medium text-gray-700">Header / Param name</label>
+              <input
+                type="text"
+                name="apiKeyName"
+                id="apiKeyName"
+                value={formData.apiKeyName}
+                onChange={handleChange}
+                placeholder={formData.authType === 'HEADER' ? 'Authorization' : 'api_key'}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+              />
+            </div>
+            <div>
+              <label htmlFor="apiKeySecret" className="block text-sm font-medium text-gray-700">Secret (never exposed to users)</label>
+              <input
+                type="password"
+                name="apiKeySecret"
+                id="apiKeySecret"
+                value={formData.apiKeySecret}
+                onChange={handleChange}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+              />
+            </div>
+          </>
+        )}
 
         <button
           type="submit"

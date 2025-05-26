@@ -14,7 +14,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "viem": "^2.29.2",
-    "x402-axios": "^0.3.3"
+    "x402-axios": "^0.3.3",
+    "dotenv": "latest"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
